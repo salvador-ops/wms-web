@@ -1,0 +1,16 @@
+<h2>Historial</h2>
+
+<table border="1">
+<tr>
+<th>Fecha</th><th>SKU</th><th>Tipo</th><th>Cantidad</th>
+</tr>
+
+{% for m in data %}
+<tr>
+<td>{{m[1]}}</td>
+<td>{{m[2]}}</td>
+<td>{{m[3]}}</td>
+<td>{{m[4]}}</td>
+</tr>
+{% endfor %}
+</table>
