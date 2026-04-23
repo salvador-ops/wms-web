@@ -2,19 +2,25 @@ from flask import Flask, render_template, request, redirect, session, jsonify
 import sqlite3
 from datetime import datetime
 import pandas as pd
+import os
+
+# 🔥 RUTA ABSOLUTA (IMPORTANTE PARA RENDER)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def db():
+    return sqlite3.connect(
+        os.path.join(BASE_DIR, "inventario.db"),
+        check_same_thread=False
+    )
 
 app = Flask(__name__)
 app.secret_key = "clave_super_secreta"
 
 # ---------------- DB ----------------
-def db():
-    return sqlite3.connect("inventario.db")
-
 def init_db():
     con = db()
     cur = con.cursor()
 
-    # Tabla inventario
     cur.execute("""
     CREATE TABLE IF NOT EXISTS inventario (
         sku TEXT PRIMARY KEY,
@@ -25,7 +31,6 @@ def init_db():
     )
     """)
 
-    # Tabla movimientos
     cur.execute("""
     CREATE TABLE IF NOT EXISTS movimientos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,7 +41,6 @@ def init_db():
     )
     """)
 
-    # Tabla usuarios
     cur.execute("""
     CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,18 +49,21 @@ def init_db():
     )
     """)
 
-    # Crear admin si no existe
+    # Crear usuario admin si no existe
     cur.execute("SELECT * FROM usuarios WHERE username=?", ("admin",))
     if not cur.fetchone():
-        cur.execute("INSERT INTO usuarios (username, password) VALUES (?,?)", ("admin", "1234"))
+        cur.execute(
+            "INSERT INTO usuarios (username, password) VALUES (?,?)",
+            ("admin", "1234")
+        )
 
     con.commit()
     con.close()
 
-# 🔥 MUY IMPORTANTE PARA RENDER
+# 🔥 SE EJECUTA AL INICIAR (IMPORTANTE)
 init_db()
 
-# 🔥 AUTO-REPARACIÓN DE BD
+# 🔥 SE EJECUTA EN CADA REQUEST (ANTI-ERROR RENDER)
 @app.before_request
 def before_request():
     init_db()
@@ -64,13 +71,19 @@ def before_request():
 # ---------------- LOGIN ----------------
 @app.route("/login", methods=["GET","POST"])
 def login():
+    init_db()  # extra seguridad
+
     if request.method == "POST":
         user = request.form["username"]
         pwd = request.form["password"]
 
         con = db()
         cur = con.cursor()
-        cur.execute("SELECT * FROM usuarios WHERE username=? AND password=?", (user,pwd))
+
+        cur.execute(
+            "SELECT * FROM usuarios WHERE username=? AND password=?",
+            (user, pwd)
+        )
         data = cur.fetchone()
         con.close()
 
@@ -97,6 +110,8 @@ def index():
     if not protegido():
         return redirect("/login")
 
+    init_db()
+
     con = db()
     cur = con.cursor()
     cur.execute("SELECT * FROM inventario")
@@ -110,6 +125,8 @@ def index():
 def agregar():
     if not protegido():
         return redirect("/login")
+
+    init_db()
 
     con = db()
     cur = con.cursor()
@@ -132,6 +149,8 @@ def agregar():
 def movimiento(tipo):
     if not protegido():
         return redirect("/login")
+
+    init_db()
 
     if request.method == "POST":
         sku = request.form["sku"]
@@ -168,6 +187,8 @@ def historial():
     if not protegido():
         return redirect("/login")
 
+    init_db()
+
     con = db()
     cur = con.cursor()
     cur.execute("SELECT * FROM movimientos ORDER BY fecha DESC")
@@ -181,6 +202,8 @@ def historial():
 def dashboard():
     if not protegido():
         return redirect("/login")
+
+    init_db()
 
     con = db()
     cur = con.cursor()
@@ -207,17 +230,21 @@ def exportar():
     if not protegido():
         return redirect("/login")
 
+    init_db()
+
     con = db()
     df = pd.read_sql_query("SELECT * FROM inventario", con)
     con.close()
 
-    df.to_excel("inventario.xlsx", index=False)
+    df.to_excel(os.path.join(BASE_DIR, "inventario.xlsx"), index=False)
 
     return "✅ Excel generado"
 
 # ---------------- API ----------------
 @app.route("/api/inventario")
 def api_inventario():
+    init_db()
+
     con = db()
     cur = con.cursor()
     cur.execute("SELECT * FROM inventario")
