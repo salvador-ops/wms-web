@@ -1,31 +1,25 @@
 <h2>Inventario</h2>
 
-<a href="/dashboard">Dashboard</a> |
-<a href="/movimiento/entrada">Entrada</a> |
-<a href="/movimiento/salida">Salida</a> |
-<a href="/historial">Historial</a> |
-<a href="/logout">Salir</a>
+<form action="/agregar" method="POST">
+    SKU: <input name="sku">
+    Producto: <input name="producto">
+    Ubicación: <input name="ubicacion">
+    Stock: <input name="stock">
+    Mínimo: <input name="minimo">
+    <button>Agregar</button>
+</form>
 
 <table border="1">
 <tr>
-<th>SKU</th><th>Producto</th><th>Stock</th>
+    <th>SKU</th><th>Producto</th><th>Stock</th>
 </tr>
 
-{% for i in data %}
-<tr {% if i[3] <= i[4] %} style="background:red;" {% endif %}>
-<td>{{i[0]}}</td>
-<td>{{i[1]}}</td>
-<td>{{i[3]}}</td>
+{% for item in data %}
+<tr>
+    <td>{{ item[0] }}</td>
+    <td>{{ item[1] }}</td>
+    <td>{{ item[3] }}</td>
 </tr>
 {% endfor %}
-</table>
 
-<h3>Agregar producto</h3>
-<form method="post" action="/agregar">
-<input name="sku" placeholder="SKU">
-<input name="producto" placeholder="Producto">
-<input name="ubicacion" placeholder="Ubicación">
-<input name="stock" placeholder="Stock">
-<input name="minimo" placeholder="Mínimo">
-<button>Guardar</button>
-</form>
+</table>
