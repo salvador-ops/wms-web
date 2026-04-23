@@ -4,7 +4,7 @@ from datetime import datetime
 import pandas as pd
 import os
 
-# 🔥 RUTA ABSOLUTA (IMPORTANTE PARA RENDER)
+# 🔥 RUTA ABSOLUTA (IMPORTANTE EN RENDER)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def db():
@@ -21,6 +21,7 @@ def init_db():
     con = db()
     cur = con.cursor()
 
+    # Inventario
     cur.execute("""
     CREATE TABLE IF NOT EXISTS inventario (
         sku TEXT PRIMARY KEY,
@@ -31,6 +32,7 @@ def init_db():
     )
     """)
 
+    # Movimientos
     cur.execute("""
     CREATE TABLE IF NOT EXISTS movimientos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,6 +43,7 @@ def init_db():
     )
     """)
 
+    # Usuarios
     cur.execute("""
     CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,21 +52,20 @@ def init_db():
     )
     """)
 
-    # Crear usuario admin si no existe
-    cur.execute("SELECT * FROM usuarios WHERE username=?", ("admin",))
-    if not cur.fetchone():
-        cur.execute(
-            "INSERT INTO usuarios (username, password) VALUES (?,?)",
-            ("admin", "1234")
-        )
+    # 🔥 FIX: RECREAR USUARIO ADMIN SIEMPRE
+    cur.execute("DELETE FROM usuarios")
+    cur.execute(
+        "INSERT INTO usuarios (username, password) VALUES (?,?)",
+        ("admin", "1234")
+    )
 
     con.commit()
     con.close()
 
-# 🔥 SE EJECUTA AL INICIAR (IMPORTANTE)
+# 🔥 SE EJECUTA AL INICIAR
 init_db()
 
-# 🔥 SE EJECUTA EN CADA REQUEST (ANTI-ERROR RENDER)
+# 🔥 SE EJECUTA EN CADA REQUEST (ANTI-ERRORES)
 @app.before_request
 def before_request():
     init_db()
@@ -71,7 +73,7 @@ def before_request():
 # ---------------- LOGIN ----------------
 @app.route("/login", methods=["GET","POST"])
 def login():
-    init_db()  # extra seguridad
+    init_db()
 
     if request.method == "POST":
         user = request.form["username"]
