@@ -3,12 +3,8 @@ import sqlite3
 from datetime import datetime
 import pandas as pd
 
-def init_db():
-
 app = Flask(__name__)
 app.secret_key = "clave_super_secreta"
-
-init_db() 
 
 # ---------------- DB ----------------
 def db():
@@ -18,18 +14,18 @@ def init_db():
     con = db()
     cur = con.cursor()
 
-    # Inventario
+    # Tabla inventario
     cur.execute("""
     CREATE TABLE IF NOT EXISTS inventario (
         sku TEXT PRIMARY KEY,
         producto TEXT,
         ubicacion TEXT,
         stock INTEGER,
-        minimo INTEGER
+        minimo INTEGER DEFAULT 0
     )
     """)
 
-    # Movimientos
+    # Tabla movimientos
     cur.execute("""
     CREATE TABLE IF NOT EXISTS movimientos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +36,7 @@ def init_db():
     )
     """)
 
-    # Usuarios
+    # Tabla usuarios
     cur.execute("""
     CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,13 +45,21 @@ def init_db():
     )
     """)
 
-    # Crear usuario admin si no existe
-    cur.execute("SELECT * FROM usuarios WHERE username='admin'")
+    # Crear admin si no existe
+    cur.execute("SELECT * FROM usuarios WHERE username=?", ("admin",))
     if not cur.fetchone():
         cur.execute("INSERT INTO usuarios (username, password) VALUES (?,?)", ("admin", "1234"))
 
     con.commit()
     con.close()
+
+# 🔥 MUY IMPORTANTE PARA RENDER
+init_db()
+
+# 🔥 AUTO-REPARACIÓN DE BD
+@app.before_request
+def before_request():
+    init_db()
 
 # ---------------- LOGIN ----------------
 @app.route("/login", methods=["GET","POST"])
@@ -85,9 +89,7 @@ def logout():
 
 # ---------------- PROTECCIÓN ----------------
 def protegido():
-    if "user" not in session:
-        return False
-    return True
+    return "user" in session
 
 # ---------------- INVENTARIO ----------------
 @app.route("/")
@@ -102,6 +104,28 @@ def index():
     con.close()
 
     return render_template("index.html", data=data)
+
+# ---------------- AGREGAR PRODUCTO ----------------
+@app.route("/agregar", methods=["POST"])
+def agregar():
+    if not protegido():
+        return redirect("/login")
+
+    con = db()
+    cur = con.cursor()
+
+    cur.execute("INSERT INTO inventario VALUES (?,?,?,?,?)", (
+        request.form["sku"],
+        request.form["producto"],
+        request.form["ubicacion"],
+        int(request.form["stock"]),
+        int(request.form["minimo"])
+    ))
+
+    con.commit()
+    con.close()
+
+    return redirect("/")
 
 # ---------------- MOVIMIENTOS ----------------
 @app.route("/movimiento/<tipo>", methods=["GET","POST"])
@@ -177,28 +201,6 @@ def dashboard():
         total_stock=total_stock,
         bajos=bajos)
 
-# ---------------- AGREGAR PRODUCTO ----------------
-@app.route("/agregar", methods=["POST"])
-def agregar():
-    if not protegido():
-        return redirect("/login")
-
-    con = db()
-    cur = con.cursor()
-
-    cur.execute("INSERT INTO inventario VALUES (?,?,?,?,?)", (
-        request.form["sku"],
-        request.form["producto"],
-        request.form["ubicacion"],
-        int(request.form["stock"]),
-        int(request.form["minimo"])
-    ))
-
-    con.commit()
-    con.close()
-
-    return redirect("/")
-
 # ---------------- EXPORTAR EXCEL ----------------
 @app.route("/exportar")
 def exportar():
@@ -226,5 +228,4 @@ def api_inventario():
 
 # ---------------- MAIN ----------------
 if __name__ == "__main__":
-    init_db()
     app.run(host="0.0.0.0", port=5000, debug=True)
