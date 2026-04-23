@@ -3,8 +3,12 @@ import sqlite3
 from datetime import datetime
 import pandas as pd
 
+def init_db():
+
 app = Flask(__name__)
 app.secret_key = "clave_super_secreta"
+
+init_db() 
 
 # ---------------- DB ----------------
 def db():
